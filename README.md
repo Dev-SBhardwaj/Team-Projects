@@ -27,4 +27,4 @@ Join the content creation revolution! Try AutomateYT today and take your YouTube
 
 **Note:** AutomateYT is a tool designed for ethical content creation. Please ensure compliance with YouTube's guidelines and policies while using this tool.
 
-🌐 [Link to AutomateYT Repository](https://github.com/your-username/AutomateYT)
+🌐 [Link to AutomateYT Repository](https://github.com/Dev-SBhardwaj/AutomateYT)
