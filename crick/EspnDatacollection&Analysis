@@ -1,0 +1,108 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime, timedelta
+from fuzzywuzzy import process
+
+# Static mapping of known players and their IDs (can be expanded)
+KNOWN_PLAYERS = {
+    "Rohit Sharma": 34102,
+    "Virat Kohli": 253802,
+    "MS Dhoni": 28081,
+    "Suryakumar Yadav": 446507,
+    "Hardik Pandya": 625371,
+    "Ishan Kishan": 720471,
+    "Faf du Plessis": 44828,
+    "Glenn Maxwell": 325026
+}
+
+# Headers to mimic a browser request
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
+
+def correct_player_name(input_name):
+    best_match, _ = process.extractOne(input_name, list(KNOWN_PLAYERS.keys()))
+    return best_match
+
+def fetch_recent_t20_data(player_id):
+    url = f"https://stats.espncricinfo.com/ci/engine/player/{player_id}.html?class=6;template=results;type=batting;view=innings"
+    print(f"🔗 URL: {url}")
+
+    try:
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Failed to fetch data: {e}")
+        return pd.DataFrame()
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Try to find the batting innings table
+    data_table = None
+    tables = soup.find_all('table', class_='engineTable')
+    
+    for table in tables:
+        headers = [th.get_text(strip=True) for th in table.find_all('th')]
+        if 'Runs' in headers and 'Opposition' in headers and 'Start Date' in headers:
+            data_table = table
+            break
+    
+    if not data_table:
+        print("⚠️ Could not locate the stats table.")
+        return pd.DataFrame()
+
+    rows = data_table.find_all('tr')
+    data = []
+    
+    for row in rows:
+        # Skip header rows and other non-data rows
+        if not row.find('td') or row.find('th'):
+            continue
+            
+        cols = row.find_all('td')
+        try:
+            # Get runs (first column)
+            runs_text = cols[0].get_text(strip=True).replace('*', '')
+            if not runs_text.isdigit():
+                continue
+            runs = int(runs_text)
+            
+            # Get date (last column)
+            date_str = cols[-1].get_text(strip=True)
+            
+            # Skip rows that don't contain actual dates
+            if not (date_str[0].isdigit() and len(date_str.split()) == 3):
+                continue
+                
+            match_date = datetime.strptime(date_str, '%d %b %Y')
+            
+            # Only include matches from the last 30 days
+            if datetime.now() - match_date <= timedelta(days=30):
+                opponent = cols[4].get_text(strip=True)
+                data.append({
+                    'date': match_date.strftime('%Y-%m-%d'),
+                    'opponent': opponent,
+                    'runs': runs
+                })
+        except Exception as e:
+            # Skip rows that cause errors
+            continue
+
+    return pd.DataFrame(data)
+
+def main():
+    user_input = input("Enter T20 player's name: ")
+    player_name = correct_player_name(user_input)
+    print(f"🔎 Fetching T20 data for: {player_name}")
+    player_id = KNOWN_PLAYERS[player_name]
+
+    df = fetch_recent_t20_data(player_id)
+    if df.empty:
+        print("📬 No T20 data in the last 30 days.")
+    else:
+        print("\n📊 Recent T20 Performances:")
+        print(df.to_string(index=False))
+
+if __name__ == "__main__":
+    main()
