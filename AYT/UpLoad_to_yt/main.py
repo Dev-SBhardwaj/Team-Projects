@@ -3,8 +3,8 @@ import googleapiclient.discovery
 import google_auth_oauthlib.flow
 
 # YouTube OAuth credentials
-CLIENT_ID = "796598696224-mp4jpce53mjlf1ai7hitq010e80neh65.apps.googleusercontent.com" 
-CLIENT_SECRET = "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"
+CLIENT_ID = "ENTER_CLIENT_ID" 
+CLIENT_SECRET = "ENTER_SECRET"
 
 # YouTube API setup  
 API_NAME = "youtube"
@@ -52,3 +52,4 @@ request = youtube.videos().insert(
 response = request.execute()
 
 print("Video uploaded with ID:", response["id"])
+
